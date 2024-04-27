@@ -7,9 +7,9 @@
 DatabaseDescriptionMessage::DatabaseDescriptionMessage(RouterId src, RouterId dst):
 	Message(src, dst) {}
 
-std::string DatabaseDescriptionMessage::toString(void)
+std::string DatabaseDescriptionMessage::toString(void) const
 {
-	INFO << "DatabaseDescriptionMessage::toString called" << std::endl;
+	DEBUG << "DatabaseDescriptionMessage::toString called" << std::endl;
 	std::stringstream ss;
 	ss << (int)MessageType::DBD << std::endl;
 	ss << src << ' ' << dst << std::endl;

@@ -5,9 +5,9 @@
 
 DatabaseDescription::DatabaseDescription(void) {}
 
-std::string DatabaseDescription::toString(void)
+std::string DatabaseDescription::toString(void) const
 {
-	INFO << "DatabaseDescription::toString called" << std::endl;
+	DEBUG << "DatabaseDescription::toString called" << std::endl;
 	std::ostringstream ss;
 	ss << size() << std::endl;
 	for (const auto& [id, seq] : *this)

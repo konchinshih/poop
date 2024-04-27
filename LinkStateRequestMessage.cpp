@@ -7,9 +7,9 @@
 LinkStateRequestMessage::LinkStateRequestMessage(RouterId src, RouterId dst):
 	Message(src, dst) {}
 
-std::string LinkStateRequestMessage::toString(void)
+std::string LinkStateRequestMessage::toString(void) const
 {
-	INFO << "LinkStateRequestMessage::toString called" << std::endl;
+	DEBUG << "LinkStateRequestMessage::toString called" << std::endl;
 
 	std::stringstream ss;
 	ss << (int)MessageType::LSR << std::endl;

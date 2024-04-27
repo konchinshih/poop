@@ -1,6 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <syncstream>
 #include <fstream>
 #include <mutex>
 
@@ -15,11 +18,19 @@ static constexpr char ANSI_ESC_COLOR_RESET[] = "\x1B[m";
 static std::ofstream stdnull("/dev/null");
 
 #define LOGLEVEL 2
-#define LOG(level, message, color) \
-	( level <= LOGLEVEL ? \
-	 	std::cout << color << message << ANSI_ESC_COLOR_RESET << " " : \
-		std::cerr << color << message << ANSI_ESC_COLOR_RESET << " " )
+#define LOG(level, message, color) ( \
+	level <= LOGLEVEL ? \
+	std::osyncstream(std::cout) << color << message << ANSI_ESC_COLOR_RESET << " " : \
+	std::osyncstream(std::cerr) << color << message << ANSI_ESC_COLOR_RESET << " " )
 
-#define DEBUG LOG(3, "[debug]", ANSI_ESC_CYAN)
-#define INFO  LOG(2, "[info]", ANSI_ESC_GREEN)
-#define ERROR LOG(0, "[error]", ANSI_ESC_RED)
+#define DEBUG			LOG(3, "[debug]", ANSI_ESC_CYAN)
+#define INFO			LOG(2, "[info]", ANSI_ESC_GREEN)
+#define WARNING		LOG(1, "[warning]", ANSI_ESC_YELLOW)
+#define ERROR			LOG(0, "[error]", ANSI_ESC_RED)
+
+static time_t currentTime;
+#define OUTPUT ( \
+	currentTime = std::time(nullptr), \
+	std::osyncstream(std::cout) \
+		<< std::put_time(std::localtime(&currentTime), "%T - ") \
+)

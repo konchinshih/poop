@@ -11,5 +11,5 @@ struct Message {
 	RouterId src, dst;
 
 	Message(RouterId src = 0, RouterId dst = 0);
-	virtual std::string toString() = 0;
+	virtual std::string toString() const = 0;
 };

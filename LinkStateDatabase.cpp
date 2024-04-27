@@ -2,7 +2,7 @@
 #include "logger.hpp"
 #include "Router.hpp"
 
-LinkStateDatabase::LinkStateDatabase(Router& router): router(router) {}
+LinkStateDatabase::LinkStateDatabase() {}
 
 DatabaseDescription LinkStateDatabase::toDatabaseDescription(void)
 {
@@ -14,13 +14,3 @@ DatabaseDescription LinkStateDatabase::toDatabaseDescription(void)
 	return dbd;
 }
 
-void LinkStateDatabase::update(RouterId src, LinkStateAdvertisement lsa)
-{
-	INFO << "LinkStateDatabase::update called" << std::endl;
-	
-	if (lsa.seq <= at(src).seq) 
-		return;
-	at(src) = lsa;
-
-	router.sendLSU(Router::BROADCAST_ID);
-}

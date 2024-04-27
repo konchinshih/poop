@@ -7,9 +7,9 @@
 HelloMessage::HelloMessage(RouterId src, RouterId dst):
 	Message(src, dst) {}
 
-std::string HelloMessage::toString(void)
+std::string HelloMessage::toString(void) const
 {
-	INFO << "HelloMessage::toString called" << std::endl;
+	DEBUG << "HelloMessage::toString called" << std::endl;
 
 	std::stringstream ss;
 	ss << (int)MessageType::HELLO << std::endl;

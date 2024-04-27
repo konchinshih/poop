@@ -7,7 +7,7 @@ LinkStateAdvertisement::LinkStateAdvertisement(Sequence seq): seq(seq) {}
 
 std::string LinkStateAdvertisement::toString(void) const
 {
-	INFO << "LinkStateAdvertisement::toString called" << std::endl;
+	DEBUG << "LinkStateAdvertisement::toString called" << std::endl;
 
 	std::stringstream ss;
 	ss << seq << std::endl;

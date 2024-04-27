@@ -10,7 +10,7 @@ using Sequence = int;
 struct LinkStateAdvertisement: std::map<RouterId, Cost> {
 	Sequence seq;
 
-	LinkStateAdvertisement(Sequence=0);
+	LinkStateAdvertisement(Sequence = 0);
 	std::string toString(void) const;
 };
 

@@ -9,6 +9,7 @@
 #include "LinkStateRequestMessage.hpp"
 #include "LinkStateUpdateMessage.hpp"
 #include "HelloTimer.hpp"
+#include "DBDTimer.hpp"
 #include "LSATimer.hpp"
 
 #include <thread>
@@ -25,27 +26,39 @@ struct Router {
 	std::jthread listener;
 	
 	HelloTimer helloTimer;
+	DBDTimer dbdTimer;
 	LSATimer lsaTimer;
+
+	std::mutex sendLock;
 
 	static const RouterId BROADCAST_ID = 65535;
 	static const size_t RECV_BUFSIZE = 1024 * 1024;
 
 	Router(RouterId id);
 	
-	void listen(std::string host, int port);
-	void send(RouterId id, std::string content);
-	void command(std::string input);
+	void listen(const std::string& host, int port);
+	void send(RouterId id, const std::string& content);
+	void command(const std::string& input);
 
-	void parse(std::string input);
-	void handleRaw(RawMessage);
-	void handleHello(HelloMessage);
-	void handleDBD(DatabaseDescriptionMessage);
-	void handleLSR(LinkStateRequestMessage);
-	void handleLSU(LinkStateUpdateMessage);
+	void parse(const std::string& input);
+	void handleRaw(const RawMessage&);
+	void handleHello(const HelloMessage&);
+	void handleDBD(const DatabaseDescriptionMessage&);
+	void handleLSR(const LinkStateRequestMessage&);
+	void handleLSU(const LinkStateUpdateMessage&);
 
-	void sendRaw(RouterId);
-	void sendHello(RouterId);
-	void sendDBD(RouterId);
-	void sendLSR(RouterId);
-	void sendLSU(RouterId);
+	// send or forward
+	void sendRaw(const RawMessage&);
+	
+	// send
+	void sendHello(RouterId dst);
+
+	// send or flood all
+	void sendDBD(RouterId dst);
+
+	// send based on dbd message
+	void sendLSR(RouterId dst, const std::vector<RouterId>&);
+
+	// send or flood except source
+	void sendLSU(RouterId src, RouterId dst, const std::vector<RouterId>&);
 };

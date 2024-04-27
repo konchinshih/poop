@@ -8,6 +8,9 @@
 RoutingTableEntry::RoutingTableEntry(Cost cost, RouterId nextHop):
 	cost(cost), nextHop(nextHop) {}
 
+bool operator==(const RoutingTableEntry& a, const RoutingTableEntry& b)
+{ return a.cost == b.cost && a.nextHop == b.nextHop; }
+
 RoutingTable::RoutingTable(Router& router):
 	router(router) {}
 
@@ -23,13 +26,14 @@ bool operator<(Link a, Link b)
 
 void RoutingTable::calculate(void)
 {
-	INFO << "RoutingTable::calculate called" << std::endl;
+	DEBUG << "RoutingTable::calculate called" << std::endl;
 
+	std::map tmp = *this;
 	clear();
 
 	std::priority_queue<Link> pq;
 	pq.emplace(router.id, 0);
-	at(router.id) = RoutingTableEntry(router.id, 0);
+	emplace(router.id, RoutingTableEntry(0, router.id));
 
 	std::set<int> visited;
 	for (;;) {
@@ -44,9 +48,21 @@ void RoutingTable::calculate(void)
 
 		if (router.lsdb.count(a))
 			for (const auto& [b, cost] : router.lsdb[a])
-				if (at(a).cost + cost < at(b).cost) {
-					at(b) =	RoutingTableEntry(a, at(a).cost + cost);
+				if (!count(b) || at(a).cost + cost < at(b).cost) {
+					emplace(b, RoutingTableEntry(at(a).cost + cost, a));
 					pq.emplace(b, at(b).cost);
 				}
 	}
+
+	for (const auto& [id, entry] : *this) {
+		if (!tmp.count(id)) 
+			OUTPUT << "add route " << id << ' ' 
+				<< entry.nextHop << ' ' << entry.cost << std::endl;
+		else if (entry != tmp[id])
+			OUTPUT << "update route " << id << ' '
+				<< entry.nextHop << ' ' << entry.cost << std::endl;
+		tmp.erase(id);
+	}
+	for (const auto& [id, entry] : tmp)
+		OUTPUT << "remove route " << id << std::endl;
 }

@@ -11,12 +11,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-Router::Router(int id): id(id), lsdb(*this), rt(*this), 
-	helloTimer(*this), lsaTimer(*this) {}
+Router::Router(int id): id(id), rt(*this), 
+	helloTimer(*this), lsaTimer(*this), dbdTimer(*this) {}
 
-void Router::listen(std::string host, int port)
+void Router::listen(const std::string& host, int port)
 {
-	INFO << "Router::listen called" << std::endl;
+	DEBUG << "Router::listen called" << std::endl;
 	INFO << "listen on " << host << ":" << port << std::endl;
 
 	sockaddr_in addr;
@@ -28,10 +28,7 @@ void Router::listen(std::string host, int port)
 
 	memset((void *)&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	if (inet_pton(AF_INET, host.data(), &addr.sin_addr) <= 0) {
-		ERROR << "cannot parse hostname" << std::endl;
-		exit(1);
-	}
+	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
 
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -48,19 +45,20 @@ void Router::listen(std::string host, int port)
 		int recvlen;
 
 		for (;;) {
-			recvlen = recvfrom(fd, buf, RECV_BUFSIZE, 0, (struct sockaddr *)&addr, &addrlen);
+			recvlen = recvfrom(fd, buf, RECV_BUFSIZE, 
+					MSG_WAITALL, (struct sockaddr *)&addr, &addrlen);
 			if (recvlen < 0) {
 				ERROR << "listen port failed" << std::endl;
 				exit(1);
 			}
 			if (recvlen > 0) {
-				INFO << "receive something" << std::endl;
+				DEBUG << "receive something" << std::endl;
 				buf[recvlen] = '\0';
 				
 				char tmp[100];
 				std::string host(inet_ntop(AF_INET, &addr.sin_addr, tmp, 100));
 				int port = ntohs(addr.sin_port);
-				DEBUG << "host, port = " << host << ',' << port << std::endl;
+				DEBUG << "host, port = " << host << ", " << port << std::endl;
 				router.parse(buf);
 			}
 		}
@@ -68,10 +66,12 @@ void Router::listen(std::string host, int port)
 	}, fd, std::ref(*this)).swap(listener);
 }
 
-void Router::send(RouterId id, std::string content)
+void Router::send(RouterId id, const std::string& content)
 {
-	INFO << "Router::send called" << std::endl;
-	INFO << "send to RouterId = " << id << std::endl;
+	DEBUG << "Router::send called" << std::endl;
+	DEBUG << "send to RouterId = " << id << std::endl;
+	
+	std::lock_guard<std::mutex> lk(sendLock);
 
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -81,19 +81,18 @@ void Router::send(RouterId id, std::string content)
 		sockaddr_in addr;
 		bzero(&addr, sizeof(addr));
 		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = inet_addr(getHost().data());
-		addr.sin_port = htons(getPort(id));
+		addr.sin_addr.s_addr = INADDR_ANY;
+		addr.sin_port = htons(getPort(dst));
 		
-		int sent = 0, sendlen;
+		int sendlen;
 //		do {
-			sendlen = sendto(fd, 
-					content.substr(sent).data(), content.size() - sent, 
-					0, (struct sockaddr *)&addr, sizeof(addr));
+		sendlen = sendto(fd, content.data(), content.size(),
+				0, (struct sockaddr *)&addr, sizeof(addr));
 
-			if (sendlen < 0) {
-				ERROR << "cannot send content" << std::endl;
-				exit(1);
-			}
+		if (sendlen < 0) {
+			ERROR << "cannot send content" << std::endl;
+			exit(1);
+		}
 //		} while(sendlen > 0);
 
 		DEBUG << "sendOne ended" << std::endl;
@@ -102,33 +101,64 @@ void Router::send(RouterId id, std::string content)
 	if (id == Router::BROADCAST_ID)
 		for (const auto& [i, entry] : nt)
 			sendOne(i);
-	else
-		sendOne(id);
+	else {
+		if (nt.count(id))
+			sendOne(id);
+		else
+			sendOne(rt[id].nextHop);
+	}
 
 	close(fd);
 }
 
-void Router::command(std::string input)
+void Router::command(const std::string& input)
 {
-	INFO << "Router::command called" << std::endl;
-	INFO << "input = " << input << std::endl;
+	DEBUG << "Router::command called" << std::endl;
+	DEBUG << "input = " << input << std::endl;
 
 	std::stringstream ss(input);
 	
 	std::string op; ss >> op;
-	if (op == "addlink") {
+	if (op == "addlink" || op == "setlink") {
 		RouterId dst;
 		Cost cost;
 		ss >> dst >> cost;
-		nt[dst] = NeighborTableEntry(
-			getHost(), getPort(dst), cost		
-		);
-	} // TODO: add more commands
+
+		if (op == "addlink") 
+			OUTPUT << "add neighbor " << dst << ' ' << cost << std::endl;
+		if (op == "setlink")
+			OUTPUT << "update neighbor " << dst << ' ' << cost << std::endl;
+		
+		if (nt.count(dst))
+			nt[dst].cost = cost;
+		else
+			nt[dst] = NeighborTableEntry(cost);
+
+		if (lsdb.count(id))
+			lsdb[id].seq++;
+		lsdb[id][dst] = cost;
+	} 
+	if (op == "rmlink") {
+		RouterId dst;
+		ss >> dst;
+
+		OUTPUT << "remove neighbor " << dst << std::endl;
+
+		nt.erase(dst);
+	}
+	if (op == "send") {
+		RawMessage msg;
+		msg.src = id;
+		ss >> msg.dst;
+		// ss.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		std::getline(ss, msg.payload);
+		this->sendRaw(msg);
+	}
 }
 
-void Router::parse(std::string content)
+void Router::parse(const std::string& content)
 {
-	INFO << "Router::parse called" << std::endl;
+	DEBUG << "Router::parse called" << std::endl;
 	
 	std::stringstream ss(content);
 	int type; ss >> type;
@@ -149,15 +179,31 @@ void Router::parse(std::string content)
 	}
 }
 
-void Router::handleRaw(RawMessage msg)
+void Router::handleRaw(const RawMessage& msg)
 {
+	DEBUG << "Router::handleRaw called" << std::endl;
 
+	if (msg.dst == id) {
+		std::osyncstream(std::cout) << "Recv message from " << id << ": " << msg.payload << std::endl;
+		return;
+	}
+
+// Forward	
+	if (!rt.count(msg.dst)) {
+		INFO << "no route to host" << std::endl;
+		return;
+	}
+
+	sendRaw(msg);
+	std::osyncstream(std::cout) 
+		<< "Forward message from " << msg.src << " to " << msg.dst << ": " << msg.payload << std::endl;
 }
 
-void Router::handleHello(HelloMessage msg)
+void Router::handleHello(const HelloMessage& msg)
 {
-	INFO << "Router::handleHello called" << std::endl;
-	
+	DEBUG << "Router::handleHello called" << std::endl;
+
+	LinkState state = nt[msg.src].state;
 	if (nt[msg.src].state == LinkState::DOWN) {
 		if (msg.received)
 			nt[msg.src].state = LinkState::EXCHANGE;
@@ -167,54 +213,129 @@ void Router::handleHello(HelloMessage msg)
 		if (msg.received)
 			nt[msg.src].state = LinkState::EXCHANGE;
 	}
-	INFO << "nt[msg.src].state = " << (int)nt[msg.src].state << std::endl;
+	if (nt[msg.src].state != state)
+		OUTPUT << "update neighbor state " << msg.src << ' ' << toString(nt[msg.src].state) << std::endl;
 }
 
-void Router::handleDBD(DatabaseDescriptionMessage msg)
+void Router::handleDBD(const DatabaseDescriptionMessage& msg)
 {
-
-}
-
-void Router::handleLSR(LinkStateRequestMessage msg)
-{
-
-}
-
-void Router::handleLSU(LinkStateUpdateMessage msg)
-{
+	DEBUG << "Router::handleDBD called" << std::endl;
 	
+	std::vector<RouterId> v;
+	for (const auto& [i, seq] : msg.dbd)
+		if (seq > nt[msg.src].dbd[i]) {
+			nt[msg.src].dbd[i] = seq;
+			v.push_back(i);
+		}
+
+	if (v.size() == 0) {
+		if (nt[msg.src].state != LinkState::FULL) {
+			nt[msg.src].state = LinkState::FULL;
+			OUTPUT << "update neighbor state " << msg.src << " Full" << std::endl;
+		}
+	}
+	else
+		this->sendLSR(msg.src, v);
 }
 
-void Router::sendRaw(RouterId dst)
+void Router::handleLSR(const LinkStateRequestMessage& msg)
 {
+	DEBUG << "Router::handleLSR called" << std::endl;
 
+	std::vector<RouterId> v;
+	std::copy(msg.begin(), msg.end(), std::back_inserter(v));
+
+	this->sendLSU(id, msg.src, v);
+}
+
+void Router::handleLSU(const LinkStateUpdateMessage& msg)
+{
+	DEBUG << "Router::handleLSU called" << std::endl;
+
+	std::vector<RouterId> v;
+	for (const auto& [i, lsa] : msg) {
+		if (!lsdb.count(i)) {
+			OUTPUT << "add LSA " << i << ' ' << lsa.seq << std::endl;
+			lsdb[i] = lsa;
+		} else if (lsdb[i].seq < lsa.seq) {
+			OUTPUT << "update LSA " << i << ' ' << lsa.seq << std::endl;
+			lsdb[i] = lsa;
+			v.push_back(i);
+		}
+	}
+
+	if (v.size()) {
+		rt.calculate();
+		this->sendLSU(msg.src, Router::BROADCAST_ID, v);
+	}
+}
+
+void Router::sendRaw(const RawMessage& msg)
+{
+	DEBUG << "Router::sendRaw called" << std::endl;
+
+	if (!rt.count(msg.dst)) {
+		WARNING << "no route to host" << std::endl;
+		return;
+	}
+
+	this->send(msg.dst, msg.toString());
 }
 
 void Router::sendHello(RouterId dst)
 {
-	INFO << "Router::sendHello called" << std::endl;
+	DEBUG << "Router::sendHello called" << std::endl;
 
+	HelloMessage msg(this->id, dst);
+	
 	if (dst == Router::BROADCAST_ID)
 		for (const auto& [i, entry] : nt) {
-			HelloMessage msg(this->id, i);
+			msg.dst = i;
 			msg.received = (entry.state != LinkState::DOWN);
 			this->send(i, msg.toString());
 		}
+	else {
+		msg.received = (nt[dst].state != LinkState::DOWN);
+		this->send(dst, msg.toString());
+	}
+}
+
+void Router::sendDBD(RouterId dst)
+{
+	DEBUG << "Router::sendDBD called" << std::endl;
+
+	if (dst == Router::BROADCAST_ID)
+		for (const auto& [i, entry] : nt) {
+			DatabaseDescriptionMessage msg(this->id, i);
+			this->send(i, msg.toString());
+		}
 	else
-		this->send(dst, HelloMessage(this->id, dst).toString());
+		this->send(dst, DatabaseDescriptionMessage(this->id, dst).toString());
 }
 
-void Router::sendDBD(RouterId routerId)
+void Router::sendLSR(RouterId dst, const std::vector<RouterId>& v)
 {
+	DEBUG << "Router::sendLSR called" << std::endl;
 
+	LinkStateRequestMessage msg(this->id, dst);
+	std::copy(v.begin(), v.end(), std::back_inserter(msg));
+	
+	this->send(dst, msg.toString());
 }
 
-void Router::sendLSR(RouterId routerId)
+void Router::sendLSU(RouterId src, RouterId dst, const std::vector<RouterId>& v)
 {
+	DEBUG << "Router::sendLSU called" << std::endl;
 
-}
+	LinkStateUpdateMessage msg(id, dst);
+	for (auto i : v)
+		msg[i] = lsdb[i];
 
-void Router::sendLSU(RouterId routerId)
-{
-
+	if (dst == Router::BROADCAST_ID)
+		for (const auto& [i, entry] : nt) if (i != src) {
+			msg.dst = i;
+			this->send(i, msg.toString());
+		}
+	else
+		this->send(msg.dst, msg.toString());
 }

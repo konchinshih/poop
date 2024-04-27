@@ -9,7 +9,7 @@ using Sequence = int;
 
 struct DatabaseDescription: std::map<RouterId, Sequence> {
 	DatabaseDescription(void);
-	std::string toString(void);
+	std::string toString(void) const;
 };
 
 std::istream& operator>>(std::istream& is, DatabaseDescription& dbd);

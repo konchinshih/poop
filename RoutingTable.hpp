@@ -11,7 +11,7 @@ struct RoutingTableEntry {
 	Cost cost;
 	RouterId nextHop;
 
-	RoutingTableEntry(Cost cost, RouterId nextHop);
+	RoutingTableEntry(Cost cost = 0, RouterId nextHop = 0);
 };
 
 struct RoutingTable: std::map<RouterId, RoutingTableEntry> {

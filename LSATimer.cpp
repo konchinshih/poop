@@ -9,7 +9,9 @@ std::function<void(std::stop_token, Router&, LSATimer&)> LSATimer::handler = [] 
 	DEBUG << "LSATimer::handler called" << std::endl;
 
 	for (;;) {
-		// TODO: LSA refresh
+		router.lsdb[router.id] = router.nt.toLSA(router.lsdb[router.id].seq);
+		router.sendLSU(router.id, Router::BROADCAST_ID, std::vector<RouterId>{router.id});
+		router.rt.calculate();
 
 		std::jthread(LSATimer::runner, std::ref(timer)).swap(timer.timer);
 		std::unique_lock<std::mutex> lk(timer.m);

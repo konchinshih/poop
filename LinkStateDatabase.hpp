@@ -11,10 +11,8 @@ using RouterId = int;
 struct Router;
 
 struct LinkStateDatabase: std::map<RouterId, LinkStateAdvertisement> {
-	Router& router;
 	std::map<RouterId, std::jthread> timer;
 
-	LinkStateDatabase(Router& router);
+	LinkStateDatabase(void);
 	DatabaseDescription toDatabaseDescription(void);
-	void update(RouterId src, LinkStateAdvertisement lsa);
 };

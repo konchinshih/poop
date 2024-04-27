@@ -8,9 +8,9 @@
 RawMessage::RawMessage(RouterId src, RouterId dst):
 	Message(src, dst) {}
 
-std::string RawMessage::toString(void)
+std::string RawMessage::toString(void) const
 {
-	INFO << "RawMessage::toString called" << std::endl;
+	DEBUG << "RawMessage::toString called" << std::endl;
 
 	std::stringstream ss;
 	ss << (int)MessageType::RAW << std::endl;

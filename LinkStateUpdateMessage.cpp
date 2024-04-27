@@ -7,9 +7,9 @@
 LinkStateUpdateMessage::LinkStateUpdateMessage(RouterId src, RouterId dst):
 	Message(src, dst) {}
 
-std::string LinkStateUpdateMessage::toString(void)
+std::string LinkStateUpdateMessage::toString(void) const
 {
-	INFO << "LinkStateUpdateMessage::toString called" << std::endl;
+	DEBUG << "LinkStateUpdateMessage::toString called" << std::endl;
 
 	std::stringstream ss;
 	ss << (int)MessageType::LSU << std::endl;

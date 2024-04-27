@@ -1,7 +1,7 @@
 CXX ?= g++
 
-COMPILE_FLAGS += -std=c++20 #-g -fsanitize=address,undefined
-LINK_FLAGS += #-g -fsanitize=address,undefined
+COMPILE_FLAGS += -std=c++20 -g -fsanitize=address,undefined
+LINK_FLAGS += -g -fsanitize=address,undefined
 
 .PHONY: all clean
 
@@ -21,6 +21,7 @@ ospf: main.o misc.o Router.o \
 	DatabaseDescriptionMessage.o \
 	Timer.o \
 	HelloTimer.o \
+	DBDTimer.o \
 	LSATimer.o
 	
 	$(CXX) -o $@ $^ $(LINK_FLAGS)

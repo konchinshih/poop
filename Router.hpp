@@ -15,9 +15,11 @@
 #include <thread>
 #include <mutex>
 
+using MACAddress = int;
 using RouterId = int;
 
 struct Router {
+	MACAddress mac;
 	RouterId id;
 	LinkStateDatabase lsdb;
 	RoutingTable rt;
@@ -29,7 +31,7 @@ struct Router {
 	DBDTimer dbdTimer;
 	LSATimer lsaTimer;
 
-	std::mutex sendLock;
+	std::mutex m;
 
 	static const RouterId BROADCAST_ID = 65535;
 	static const size_t RECV_BUFSIZE = 1024 * 1024;

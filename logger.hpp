@@ -17,11 +17,16 @@ static constexpr char ANSI_ESC_COLOR_RESET[] = "\x1B[m";
 
 static std::ofstream stdnull("/dev/null");
 
-#define LOGLEVEL 2
+static constexpr int LOGLEVEL = 2;
+extern bool verbose;
+
 #define LOG(level, message, color) ( \
 	level <= LOGLEVEL ? \
 	std::osyncstream(std::cout) << color << message << ANSI_ESC_COLOR_RESET << " " : \
-	std::osyncstream(std::cerr) << color << message << ANSI_ESC_COLOR_RESET << " " )
+	( verbose ? \
+		std::osyncstream(std::cerr) << color << message << ANSI_ESC_COLOR_RESET << " " : \
+		std::osyncstream(stdnull) \
+	))
 
 #define DEBUG			LOG(3, "[debug]", ANSI_ESC_CYAN)
 #define INFO			LOG(2, "[info]", ANSI_ESC_GREEN)

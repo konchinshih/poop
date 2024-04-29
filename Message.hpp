@@ -6,6 +6,7 @@
 #include <string>
 
 using RouterId = int;
+using MACAddress = int;
 
 struct Message {
 	RouterId src, dst;

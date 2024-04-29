@@ -28,9 +28,8 @@ std::istream& operator>>(std::istream& is, LinkStateUpdateMessage& msg)
 	int n; is >> n;
 	while (n--) {
 		RouterId id;
-		LinkStateAdvertisement lsa;
-		is >> id >> lsa;
-		msg[id] = lsa;
+		is >> id;
+		is >> msg[id];
 	}
 	return is;
 }

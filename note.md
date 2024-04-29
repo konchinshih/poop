@@ -1,53 +1,85 @@
+## Threads
+
+- command
+    - [x] addlink / setlink
+    - [x] rmlink
+    - [x] send
+- listen udp
+    - [x] raw
+    - [x] hello
+    - [x] dbd
+    - [x] lsr
+    - [x] lsu
+- timer
+    - [x] hello
+    - [x] dbd
+    - [x] lsa
+    - [x] lsdb
+    - [x] router down
+
+mutex on lsdb, rt, nt
+lock only in these function to prevent deadlock
+
+## Communication formats
+
+- Message
+    - RouterId src, dst
+    - virtual std::string toString()
+
+- Hello: Message
+    - received
+
+- DatabaseDescription: Message, std::map<RouterId, Sequence>
+
+- LinkStateRequest: Message, std::vector<RouterId>
+
+- LinkStateUpdate: Message, std::map<int, LinkStateAdvertisement>
+
 ## Components
 
-- DatabaseDescription: std::map<RouterId, Sequence>
+- LinkState: enum {DOWN, INIT, EXCHANGE, FULL}
+
+- LinkStateAdvertisement: map<RouterId, Cost>
+    - Sequence
 
 - LinkStateDatabase: std::map<RouterId, LinkStateAdvertisement>
     - std::map<RouterId, std::jthread>
     - DatabaseDescription toDatabaseDescription()
     - void update(LinkStateUpdate)
 
-
-- RoutingTable: std::map<RouterId, RoutingTableEntry>
-    - void calculate()
-
 - RoutingTableEntry
     - Cost
     - NextHop
 
-- NeighborTable: std::map<RouterId, NeighborTableEntry>
+- RoutingTable: std::map<RouterId, RoutingTableEntry>
+    - void calculate()
 
 - NeighborTableEntry
     - Cost
     - State
     - DatabaseDescription
 
-- State: enum {DOWN, INIT, EXCHANGE, FULL}
+- NeighborTable: std::map<RouterId, NeighborTableEntry>
+
 
 ## Timer
 
-- Timer: std::jthread
+- Timer
+    - std::function hypervisor_func
+    - std::fucntion runner_func
+    - std::jthread hypervisor
+    - std::jthread runner
 
-- TimeQueue
-    - void deploy(Router&)
+    - void refresh(void)
 
-- HelloTimeQueue: TimeQueue, std::priority_queue<int>
+- HelloTimer: Timer
+    - Router& router
  
-- SelfLSARefreshTimeQueue: Timequeue, std::priority_queue<int>
+- LSATimer: Timer
+    - Router& router
 
-## Messages
-
-- Message
-    - virtual std::string toString()
-
-- Hello: Message
-
-- LinkStateAdvertisement: Message, map<RouterId, Cost>
-    - Sequence
-
-- LinkStateRequest: Message, vector<RouterId>
-
-- LinkStateUpdate: Message, map<int, LinkStateAdvertisement>
+- DBDTimer: Timer
+    - Router& router
 
 ## Main
 
@@ -57,8 +89,10 @@
     - NeighborTable nt
 
     - std::jthread listener
-    - std::jthread timer
-    - std::mutex io
+    
+    - HelloTimer
+    - DBDTimer
+    - LSATimer
 
     - void listen(Port)
     - void send(RouterId, string)
@@ -72,32 +106,4 @@
     - void sendLSA(RouterId)
     - void sendLSR(RouterId)
     - void sendLSU(RouterId)
-
-## Format
-
-### General
-
-```
-[type]\n
-[src] [dst]\n
-[payload]
-```
-
-### Raw
-
-```
-0\n
-[src] [dst]\n
-[message]
-```
-
-### Hello
-
-```
-1\n
-[src] [dst]\n
-[received]
-```
-
-### 
 

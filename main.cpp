@@ -4,6 +4,9 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
+
+bool verbose = false;
 
 int main(int argc, char *argv[])
 {
@@ -12,6 +15,9 @@ int main(int argc, char *argv[])
 	if (argc <= 1)
 		printHelp();
 	int id = atoi(argv[1]);
+
+	if (argc > 2 && strcmp(argv[2], "-v") == 0) 
+		verbose = true;
 
 	Router router(id);
 	router.listen(getHost(), getPort(id));

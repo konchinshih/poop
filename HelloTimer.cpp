@@ -9,11 +9,12 @@ std::function<void(std::stop_token, Router&, HelloTimer&)> HelloTimer::handler =
 	DEBUG << "HelloTimer::handler called" << std::endl;
 
 	for (;;) {
-		router.sendHello(router.BROADCAST_ID);
-		
 		std::jthread(HelloTimer::runner, std::ref(timer)).swap(timer.timer);	
-		std::unique_lock<std::mutex> lk(timer.m);
+		std::unique_lock lk(timer.m);
 		timer.cv.wait(lk);
+		
+		std::unique_lock rwlk(router.m);
+		router.sendHello(router.BROADCAST_ID);
 	}
 };
 
@@ -22,14 +23,17 @@ std::function<void(std::stop_token, HelloTimer&)> HelloTimer::runner = [] (
 {
 	DEBUG << "HelloTimer::runner called" << std::endl;
 
-	for (int i = 0; i < HELLO_TIMER_TICK; i++) {
+	std::chrono::time_point start = std::chrono::steady_clock::now();
+	do {	
+		std::this_thread::yield();
+
 		if (stoken.stop_requested()) {
 			DEBUG << "timer stopped on demend" << std::endl;
 			timer.cv.notify_one();
 			return;
 		}
 		std::this_thread::sleep_for(TICK);
-	}
+	} while (std::chrono::steady_clock::now() < start + HELLO_TIMER);
 	DEBUG << "timer stopped automatically" << std::endl;
 	timer.cv.notify_one();
 };

@@ -1,2 +1,5 @@
 *.o
+test.cpp
+
 ospf
+a.out

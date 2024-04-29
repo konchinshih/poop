@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <shared_mutex>
 
 using RouterId = int;
 using Cost = int;
@@ -16,7 +17,7 @@ struct RoutingTableEntry {
 
 struct RoutingTable: std::map<RouterId, RoutingTableEntry> {
 	Router& router;
-	RoutingTable(Router& router);
 
+	RoutingTable(Router& router);
 	void calculate(void);
 };

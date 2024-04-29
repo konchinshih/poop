@@ -36,6 +36,7 @@ void RoutingTable::calculate(void)
 	emplace(router.id, RoutingTableEntry(0, router.id));
 
 	std::set<int> visited;
+
 	for (;;) {
 		while (pq.size() && visited.count(pq.top().id))
 			pq.pop();

@@ -18,3 +18,8 @@ int getPort(RouterId id)
 {
 	return id + 10000;
 }
+
+RouterId parsePort(int port)
+{
+	return port - 10000;
+}

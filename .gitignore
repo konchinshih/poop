@@ -1,5 +1,2 @@
-*.o
-test.cpp
-
+**.o
 ospf
-a.out

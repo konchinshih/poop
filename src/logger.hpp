@@ -17,7 +17,7 @@ static constexpr char ANSI_ESC_COLOR_RESET[] = "\x1B[m";
 
 static std::ofstream stdnull("/dev/null");
 
-static constexpr int LOGLEVEL = 2;
+static constexpr int LOGLEVEL = 0;
 extern bool verbose;
 
 #define LOG(level, message, color) ( \

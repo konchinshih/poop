@@ -3,8 +3,11 @@
 ## Usage
 
 ```cpp
-# compile
-make
+# install dependency (in the class VM)
+make deps
+
+# compile using docker
+make docker
 
 # run
 ./ospf <Router ID>

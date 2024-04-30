@@ -1,7 +1,6 @@
 version: "3"
 services:
-  compile:
-    hostname: archcompiler
+  ospf:
     build: .
     volumes: 
     - ".:/work"

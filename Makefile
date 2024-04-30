@@ -5,11 +5,11 @@ all:
 	cp src/ospf .
 
 deps:
-	sudo apt install docker docker.io docker-buildx docker-compose
+	sudo apt install -y docker docker.io docker-buildx docker-compose
 
 docker:
 	sudo docker buildx build . --tag ospf:latest
-	sudo docker-compose run compile 
+	sudo docker-compose run ospf
 	sudo chown -R $(shell id -u):$(shell id -u) . 
 
 clean:

@@ -1,0 +1,12 @@
+services:
+  compile:
+    hostname: archcompiler
+    build:
+      dockerfile_inline: |
+        FROM archlinux:base-devel
+
+        WORKDIR /work
+        ENTRYPOINT make clean && make
+    volumes: 
+    - ".:/work"
+

@@ -1,9 +1,16 @@
-.PHONY: all clean
+.PHONY: all deps docker clean
 
 all:
-	make -C src all -j 16
+	make -C src -j 16
 	cp src/ospf .
+
+deps:
+	sudo apt install docker docker.io docker-buildx docker-compose
+
+docker:
+	sudo docker compose run compile
+	sudo chown -R $(shell id -u):$(shell id -u) . 
 
 clean:
 	make -C src clean
-	rm ospf
+	- rm ospf

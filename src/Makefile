@@ -1,7 +1,7 @@
 CXX ?= g++
 
 COMPILE_FLAGS += -std=c++20 #-g -fsanitize=address,undefined
-LINK_FLAGS += -lpthread #-g -fsanitize=address,undefined
+LINK_FLAGS += -lpthread -static -static-libgcc #-g -fsanitize=address,undefined
 
 .PHONY: all clean
 
